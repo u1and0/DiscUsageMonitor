@@ -59,7 +59,9 @@ def load_data() -> pd.DataFrame:
                                conn,
                                index_col=["timestamp"],
                                parse_dates=["timestamp"])
-        df.index = df.index.tz_localize("Asia/Tokyo")
+        df.index += datetime.timedelta(hours=9)  # Asia/Tokyo location
+        # timestamp化するときに強制的にUTC情報に変わっているため、loadしたときに
+        # 書き換える必要がある
     except (sqlite3.DatabaseError, sqlite3.DataError) as e:
         print(e)
         raise e
