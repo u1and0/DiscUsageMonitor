@@ -10,12 +10,14 @@ uvicorn --host "0.0.0.0" --port 8881 main:app
 
 Open browser and access 'localhost:8881/index'
 """
-from dashapp import create_dash_app
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.wsgi import WSGIMiddleware
 import uvicorn
 
-from dashapp import db_init, create_dash_app
+from dashapp import create_dash_app, db_init, load_data, \
+    save_data, INTERVAL_SEC
 
 VERSION = "v0.1.0"
 app = FastAPI()
@@ -52,9 +54,14 @@ def get_status():
     return {"status": "ok"}
 
 
-dash_app = create_dash_app(requests_pathname_prefix="/index/")
+db_init()
+
+df = load_data()
+loop = asyncio.get_event_loop()
+loop.create_task(save_data(INTERVAL_SEC))
+
+dash_app = create_dash_app(df, requests_pathname_prefix="/index/")
 app.mount("/index", WSGIMiddleware(dash_app.server))
 
 if __name__ == "__main__":
-    db_init()
     uvicorn.run("main:app", host="0.0.0.0", port=8881)

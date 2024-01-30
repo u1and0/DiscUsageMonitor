@@ -80,7 +80,8 @@ async def save_data(interval: int):
         conn.close()
 
 
-def get_disk_space():
+def get_disk_space() -> tuple[int, int, int]:
+    """dfコマンドを打ってDisc容量を取得する"""
     output = subprocess.run(
         [
             "df",
@@ -98,20 +99,6 @@ def get_disk_space():
     size = int(stats[0].replace(",", "")) * 1000
     used = int(stats[1].replace(",", "")) * 1000
     return (timestamp, size, used)
-
-
-def update_data(df: pd.DataFrame) -> pd.DataFrame:
-    # 今はすべてのデータをとりあえず読み込む
-    return load_data()
-    # append_data = pd.DataFrame(np.random.randn(1, len(DUMMY_DATA_NAME)),
-    #                            index=[datetime.datetime.now()],
-    #                            columns=df.columns)
-    # return pd.concat([df, append_data])
-
-
-df = load_data()
-loop = asyncio.get_event_loop()
-loop.create_task(save_data(INTERVAL_SEC))
 
 
 def format_number(num):
@@ -132,7 +119,8 @@ def free_disc(df: pd.DataFrame):
     return last
 
 
-def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
+def create_dash_app(df: pd.DataFrame,
+                    requests_pathname_prefix: str = None) -> dash.Dash:
     """dash application run from main.py"""
     server = flask.Flask(__name__)
     server.secret_key = os.environ.get("secret_key", "secret")
@@ -215,10 +203,7 @@ def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
         # current_figure,
         relayout_data=[],
     ):
-        # globalステートメントを使用することで、
-        # 関数内でグローバル変数を変更することができます。
-        global df
-        df = update_data(df)
+        df = load_data()
         print(df.iloc[-10:])
         # shift = datetime.timedelta(minutes=10)
 
@@ -263,7 +248,7 @@ def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
             },
             "yaxis": {
                 "range": show_range,
-                "title": "kB"
+                # "title": "size"
             },
         }
 
@@ -272,7 +257,6 @@ def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
                 x=df.index,
                 y=df["size"],
                 name="size",
-                # fill="tozeroy",
                 mode="lines",
             ),
             go.Scatter(
