@@ -13,6 +13,8 @@ import dash_table
 from dash import dcc, html
 import plotly.graph_objs as go
 
+TITLE = "Disc Usage Monitor"
+DESCRIPTION = "\\\\ns5のディスク容量を可視化します。"
 MNT_POINT = "/mnt/z"
 TABLE_NAME = "data"
 INDEX_COL = "timestamp"
@@ -103,18 +105,19 @@ def get_disk_space() -> tuple[int, int, int]:
 
 def format_number(num):
     """Define a function to format the numbers"""
-    suffixes = ['', 'K', 'M', 'B', 'T']
+    suffixes = ['', 'k', 'M', 'G', 'T']
     for suffix in suffixes:
         if abs(num) < 1000:
             return f"{num:.2f}{suffix}"
         num /= 1000
 
 
-def free_disc(df: pd.DataFrame):
+def free_disc(df: pd.DataFrame) -> pd.DataFrame:
     """空き容量と使用率の表示"""
     last = df.iloc[-1:]
     last["free"] = last["size"] - last["used"]
     last["usage[%]"] = last["used"] / last["size"] * 100
+    # 小数以下2桁に整形して人が見やすいk, M, G, Tに変換
     last = last.applymap(lambda x: format_number(x) if pd.notnull(x) else x)
     return last
 
@@ -157,7 +160,8 @@ def create_dash_app(df: pd.DataFrame,
     #                    className = "input-group input-group-lg")
     app.layout = html.Div(
         [
-            html.H1("Disc Usage Monitor"),
+            html.H1(TITLE),
+            html.P(DESCRIPTION),
             # dcc.Dropdown(id="my-dropdown",
             #              options=[{
             #                  "label": "All",
@@ -205,8 +209,6 @@ def create_dash_app(df: pd.DataFrame,
     ):
         df = load_data()
         print(df.iloc[-10:])
-        # shift = datetime.timedelta(minutes=10)
-
         # ドロップダウンリストからグラフ種類の選択
         # dff, data = select_graph_type(df, selected_dropdown_value)
 
@@ -225,6 +227,7 @@ def create_dash_app(df: pd.DataFrame,
         show_df = df[-100:]  # [-MAX_POINT:]
         # (show_df.min().min(), show_df.max().max())
         show_range = (0, show_df.max().max() * 1.05)  # 5%シフト
+        shift = datetime.timedelta(seconds=INTERVAL_SEC)
 
         layout = {
             "margin": {
@@ -235,12 +238,10 @@ def create_dash_app(df: pd.DataFrame,
             },
             "xaxis": {
                 "range": (
-                    df.index[0],
-                    df.index[-1],
                     # # 最大MAX_POINTポイントまで表示
-                    # show_df.index[0] if len(df) > 100 else df.index[0],
+                    show_df.index[-10] if len(df) > 10 else df.index[0],
                     # # 1秒先まで表示
-                    # show_df.index[-1] + shift),
+                    show_df.index[-1] + shift,
                 ),
                 "rangeslider": {
                     "visible": False
