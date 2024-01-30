@@ -19,7 +19,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 import uvicorn
 
 from dashapp import create_dash_app, db_init, load_data, \
-    save_data, INTERVAL_SEC
+    save_data, INTERVAL_SEC, DB_NAME
 
 VERSION = "v0.1.1r"
 app = FastAPI()
@@ -64,7 +64,7 @@ def get_status():
 # Create table if not exist
 db_init()
 
-df = load_data()
+df = load_data(DB_NAME)
 loop = asyncio.get_event_loop()
 loop.create_task(save_data(MNT_POINT, INTERVAL_SEC))
 

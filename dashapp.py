@@ -8,15 +8,13 @@ import flask
 import pandas as pd
 
 import dash
-from dash.dependencies import Input, Output, State
-import dash_table
-from dash import dcc, html
+from dash.dependencies import Input, Output  # , State
+from dash import dcc, html, dash_table
 import plotly.graph_objs as go
 
 TITLE = "Disk Usage Monitor"
 DESCRIPTION = "\\\\ns5のディスク容量を可視化します。"
 TABLE_NAME = "data"
-INDEX_COL = "timestamp"
 DB_NAME = "disk_usage.db"
 INTERVAL_SEC = 10
 """
@@ -43,17 +41,18 @@ def db_init():
     conn.close()
 
 
-def load_data() -> pd.DataFrame:
+def load_data(db_path: str) -> pd.DataFrame:
     try:
-        conn = sqlite3.connect(DB_NAME)
+        index_col = "timestamp"
+        conn = sqlite3.connect(db_path)
         df = pd.read_sql_query(f"""
                                 SELECT * FROM (
                                     SELECT *
                                     FROM {TABLE_NAME}
-                                    ORDER BY {INDEX_COL} DESC
+                                    ORDER BY {index_col} DESC
                                     LIMIT {LIMIT_ROW}
                                 ) AS sub
-                                ORDER BY {INDEX_COL} ASC;
+                                ORDER BY {index_col} ASC;
                                """,
                                conn,
                                index_col=["timestamp"],
@@ -62,7 +61,6 @@ def load_data() -> pd.DataFrame:
         # timestamp化するときに強制的にUTC情報に変わっているため、loadしたときに
         # 書き換える必要がある
     except (sqlite3.DatabaseError, sqlite3.DataError) as e:
-        print(e)
         raise e
     finally:
         conn.close()
@@ -70,7 +68,7 @@ def load_data() -> pd.DataFrame:
 
 
 async def save_data(mount_path: str, interval: int):
-    global df
+    # global df
     while True:
         await asyncio.sleep(interval)
         data = get_disk_space(mount_path)
@@ -123,6 +121,30 @@ def free_disk(df: pd.DataFrame) -> pd.DataFrame:
     return last
 
 
+def select_graph_type(df: pd.DataFrame,
+                      selected: str) -> (pd.DataFrame, list[go.Scatter]):
+    data = [go.Scatter(
+        x=df.index,
+        y=df["size"],
+        name="size",
+        mode="lines",
+    )]
+    if selected == "RealTime":
+        data.append(
+            go.Scatter(
+                x=df.index,
+                y=df["used"],
+                name="used",
+                fill="tozeroy",
+                mode="lines+markers",
+            ))
+        return df, data
+    elif selected == "Min-Max":
+        df["max"] = df.max()
+        df["min"] = df.min()
+        return df.loc[["size", "max", "min"]], data
+
+
 def create_dash_app(df: pd.DataFrame,
                     requests_pathname_prefix: str = None) -> dash.Dash:
     """dash application run from main.py"""
@@ -163,18 +185,18 @@ def create_dash_app(df: pd.DataFrame,
         [
             html.H1(TITLE),
             html.P(DESCRIPTION),
-            # dcc.Dropdown(id="my-dropdown",
-            #              options=[{
-            #                  "label": "All",
-            #                  "value": "All"
-            #              }, {
-            #                  "label": "Min",
-            #                  "value": "Min"
-            #              }, {
-            #                  "label": "Candle",
-            #                  "value": "Candle"
-            #              }],
-            #              value="All"),
+            dcc.Dropdown(id="my-dropdown",
+                         options=[{
+                             "label": "RealTime",
+                             "value": "RealTime"
+                         }, {
+                             "label": "Min-Max",
+                             "value": "Min-Max"
+                         }, {
+                             "label": "Candle",
+                             "value": "Candle"
+                         }],
+                         value="RealTime"),
             dcc.Graph(id="my-graph"),
             dcc.Interval(
                 id="interval-component",
@@ -190,14 +212,14 @@ def create_dash_app(df: pd.DataFrame,
         Output("my-graph", "figure"),
         [
             # 表示方法の変更
-            # Input("my-dropdown", "value"),
+            Input("my-dropdown", "value"),
             # 自動更新
             Input("interval-component", "n_intervals"),
             # 臨界値変更
             # Input("my-input", "value"),
             # グラフの表示範囲変更
-            State("my-graph", "figure"),
-            # Input("my-graph", "relayoutData"),
+            # State("my-graph", "figure"),
+            Input("my-graph", "relayoutData"),
         ],
         prevent_initial_call=True,
     )
@@ -208,10 +230,10 @@ def create_dash_app(df: pd.DataFrame,
         # current_figure,
         relayout_data=[],
     ):
-        df = load_data()
+        df = load_data(DB_NAME)
         print(df.iloc[-10:])
         # ドロップダウンリストからグラフ種類の選択
-        # dff, data = select_graph_type(df, selected_dropdown_value)
+        dff, data = select_graph_type(df, selected_dropdown_value)
 
         # 臨界値エリアの表示
         # data.append(
@@ -225,10 +247,10 @@ def create_dash_app(df: pd.DataFrame,
         #         fillcolor=THRESHOLD_COLOR,
         #     ))
 
-        show_df = df[-100:]  # [-MAX_POINT:]
+        show_df = dff[-100:]  # [-MAX_POINT:]
         # (show_df.min().min(), show_df.max().max())
-        show_range = (0, show_df.max().max() * 1.05)  # 5%シフト
-        shift = datetime.timedelta(seconds=INTERVAL_SEC)
+        show_range = (0, show_df.max().max() * 1.05)  # 上5%シフト
+        shift = datetime.timedelta(seconds=INTERVAL_SEC)  # interval分だけ左にシフト
 
         layout = {
             "margin": {
@@ -240,7 +262,7 @@ def create_dash_app(df: pd.DataFrame,
             "xaxis": {
                 "range": (
                     # # 最大MAX_POINTポイントまで表示
-                    show_df.index[-10] if len(df) > 10 else df.index[0],
+                    show_df.index[-10] if len(dff) > 10 else dff.index[0],
                     # # 1秒先まで表示
                     show_df.index[-1] + shift,
                 ),
@@ -261,22 +283,6 @@ def create_dash_app(df: pd.DataFrame,
             }
         }
 
-        data = [
-            go.Scatter(
-                x=df.index,
-                y=df["size"],
-                name="size",
-                mode="lines",
-            ),
-            go.Scatter(
-                x=df.index,
-                y=df["used"],
-                name="used",
-                fill="tozeroy",
-                mode="lines+markers",
-            ),
-        ]
-
         fig = {"data": data, "layout": layout}
 
         # assert isinstance(relayout_data, list)
@@ -293,7 +299,8 @@ def create_dash_app(df: pd.DataFrame,
         # relayout_dataでrangeが変えられていれば、
         # ユーザーがグラフ尺度を変更したときにその状態をキープ
         fig["layout"]["xaxis"]["range"] = relayout_data.get("xaxis.range")
-        fig["layout"]["yaxis"]["range"] = (df.min().min(), df.max().max())
+        fig["layout"]["yaxis"]["range"] = relayout_data.get("yaxis.range")
+        # (df.min().min(), df.max().max())
         return fig
 
     return app
