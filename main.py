@@ -68,7 +68,7 @@ df = load_data()
 loop = asyncio.get_event_loop()
 loop.create_task(save_data(MNT_POINT, INTERVAL_SEC))
 
-dash_app = create_dash_app(df, requests_pathname_prefix="/index")
+dash_app = create_dash_app(df, requests_pathname_prefix="/index/")
 app.mount("/index", WSGIMiddleware(dash_app.server))
 
 if __name__ == "__main__":

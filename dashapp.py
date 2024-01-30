@@ -252,6 +252,13 @@ def create_dash_app(df: pd.DataFrame,
                 "range": show_range,
                 # "title": "size"
             },
+            "legend": {
+                "orientation": "h",
+                "yanchor": "top",
+                "xanchor": "center",
+                "y": 1.1,
+                "x": 0.5,
+            }
         }
 
         data = [
