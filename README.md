@@ -1,4 +1,4 @@
-<img src="https://img.shields.io/badge/version-v0.1.0-FF7777.svg"></img>
+<img src="https://img.shields.io/badge/version-v0.1.1-FF7777.svg"></img>
 <img src="https://img.shields.io/badge/LICENSE-MIT-3388FF.svg"></img>
 
 Disc Usage Monitor

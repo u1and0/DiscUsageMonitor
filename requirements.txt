@@ -1,0 +1,7 @@
+dash
+dash-table
+fastapi
+flask
+pandas
+plotly
+uvicorn
