@@ -15,7 +15,6 @@ import plotly.graph_objs as go
 
 TITLE = "Disk Usage Monitor"
 DESCRIPTION = "\\\\ns5のディスク容量を可視化します。"
-MNT_POINT = "/mnt/z"
 TABLE_NAME = "data"
 INDEX_COL = "timestamp"
 DB_NAME = "disk_usage.db"
@@ -70,11 +69,11 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-async def save_data(interval: int):
+async def save_data(mount_path: str, interval: int):
     global df
     while True:
         await asyncio.sleep(interval)
-        data = get_disk_space()
+        data = get_disk_space(mount_path)
         print(data)
 
         conn = sqlite3.connect(DB_NAME)
@@ -84,14 +83,14 @@ async def save_data(interval: int):
         conn.close()
 
 
-def get_disk_space() -> tuple[int, int, int]:
+def get_disk_space(mount_path) -> tuple[int, int, int]:
     """dfコマンドを打ってDisk容量を取得する"""
     output = subprocess.run(
         [
             "df",
             "-k",  # 1KiB blocks 単位で取得
             "--output=size,used",  # サイズと使用量のみ取得
-            MNT_POINT,
+            mount_path,
         ],
         capture_output=True).stdout.decode()
     stats = output.split("\n")[1].split()  # ヘッダーを省略
