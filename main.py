@@ -20,6 +20,7 @@ from dashapp import db_init, create_dash_app
 VERSION = "v0.1.0"
 app = FastAPI()
 
+
 @app.get("/")
 def read_main():
     return {

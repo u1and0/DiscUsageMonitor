@@ -122,6 +122,7 @@ def format_number(num):
             return f"{num:.2f}{suffix}"
         num /= 1000
 
+
 def free_disc(df: pd.DataFrame):
     """空き容量と使用率の表示"""
     last = df.iloc[-1:]
@@ -129,6 +130,7 @@ def free_disc(df: pd.DataFrame):
     last["usage[%]"] = last["used"] / last["size"] * 100
     last = last.applymap(lambda x: format_number(x) if pd.notnull(x) else x)
     return last
+
 
 def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
     """dash application run from main.py"""
@@ -181,11 +183,12 @@ def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
             #              }],
             #              value="All"),
             dcc.Graph(id="my-graph"),
-            dcc.Interval(id="interval-component", interval=INTERVAL_SEC*1000, # millisecを指定する
-                         n_intervals=0),
+            dcc.Interval(
+                id="interval-component",
+                interval=INTERVAL_SEC * 1000,  # millisecを指定する
+                n_intervals=0),
             dash_table.DataTable(id="my-table",
-                                 data = free_disc(df).to_dict("records")
-                                 ),
+                                 data=free_disc(df).to_dict("records")),
             # input_div,
         ],
         className="container")
@@ -265,23 +268,23 @@ def create_dash_app(requests_pathname_prefix: str = None) -> dash.Dash:
         }
 
         data = [
-                go.Scatter(
-                    x=df.index,
-                    y=df["size"],
-                    name="size",
-                    # fill="tozeroy",
-                    mode="lines",
-                ),
-                go.Scatter(
-                    x=df.index,
-                    y=df["used"],
-                    name="used",
-                    fill="tozeroy",
-                    mode="lines+markers",
-                ),
-            ]
+            go.Scatter(
+                x=df.index,
+                y=df["size"],
+                name="size",
+                # fill="tozeroy",
+                mode="lines",
+            ),
+            go.Scatter(
+                x=df.index,
+                y=df["used"],
+                name="used",
+                fill="tozeroy",
+                mode="lines+markers",
+            ),
+        ]
 
-        fig = { "data":data , "layout": layout }
+        fig = {"data": data, "layout": layout}
 
         # assert isinstance(relayout_data, list)
         # relayout_dataでrangeが変えられていなければ、デフォルトのlayoutで返す
