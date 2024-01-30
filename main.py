@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 Save the data to a SQLite3 database by periodically hitting the df command,
 visualize the data using plotly-dash.
@@ -19,7 +20,7 @@ import uvicorn
 from dashapp import create_dash_app, db_init, load_data, \
     save_data, INTERVAL_SEC
 
-VERSION = "v0.1.0"
+VERSION = "v0.1.1"
 app = FastAPI()
 
 

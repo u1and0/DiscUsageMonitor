@@ -13,7 +13,7 @@ import dash_table
 from dash import dcc, html
 import plotly.graph_objs as go
 
-TITLE = "Disc Usage Monitor"
+TITLE = "Disk Usage Monitor"
 DESCRIPTION = "\\\\ns5のディスク容量を可視化します。"
 MNT_POINT = "/mnt/z"
 TABLE_NAME = "data"
@@ -85,7 +85,7 @@ async def save_data(interval: int):
 
 
 def get_disk_space() -> tuple[int, int, int]:
-    """dfコマンドを打ってDisc容量を取得する"""
+    """dfコマンドを打ってDisk容量を取得する"""
     output = subprocess.run(
         [
             "df",
@@ -114,7 +114,7 @@ def format_number(num):
         num /= 1000
 
 
-def free_disc(df: pd.DataFrame) -> pd.DataFrame:
+def free_disk(df: pd.DataFrame) -> pd.DataFrame:
     """空き容量と使用率の表示"""
     last = df.iloc[-1:]
     last["free"] = last["size"] - last["used"]
@@ -182,7 +182,7 @@ def create_dash_app(df: pd.DataFrame,
                 interval=INTERVAL_SEC * 1000,  # millisecを指定する
                 n_intervals=0),
             dash_table.DataTable(id="my-table",
-                                 data=free_disc(df).to_dict("records")),
+                                 data=free_disk(df).to_dict("records")),
             # input_div,
         ],
         className="container")
