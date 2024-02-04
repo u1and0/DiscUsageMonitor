@@ -25,8 +25,8 @@ VERSION = "v0.1.1r"
 app = FastAPI()
 
 # Check mount point for monitoring
-MNT_POINT = "/mnt/e"
-if not os.path.ismount(MNT_POINT):
+MNT_POINT = "/dev/mmcblk0p2"
+if not os.path.exists(MNT_POINT):
     raise OSError(f"{MNT_POINT} not found")
 
 
